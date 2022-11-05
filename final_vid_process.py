@@ -6,7 +6,7 @@ import cv2
 import sys
 from geometry import *
 import statistics as stc
-
+# this is atest of the reload
 plt.style.use('_mpl-gallery')
 
 def format_contour(x: int, contours: list):# gets the (x,y) coordinates for the desired contour, and plots it
