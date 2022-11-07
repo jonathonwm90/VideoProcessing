@@ -13,15 +13,11 @@ class Line():
         self.b = b
 
     def get_m_b(self):
-        try:
-            if self.m == 0:
-                self.m = float((self.y1 - self.y2)/(self.x1 - self.x2))
-                
-        except:
-            pass
-            #print("error", self.coor1, self.coor2, self.m)
+        if self.m == 0:
+            self.m = float((self.y1 - self.y2)/(self.x1 - self.x2))
+            
         if self.b == 0:
-            self.b = float((self.y1 - (self.m * self.x1)))
+            self.b = float(self.y1 - (self.m * self.x1))
 
         return self.m , self.b
 
