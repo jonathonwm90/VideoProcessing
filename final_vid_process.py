@@ -1,19 +1,44 @@
 # final_vid_process.py VID_EDITED/side_head1.mp4 3
 
+import statistics as stc
+import sys
+
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-import cv2
-import sys
+from matplotlib.backend_bases import MouseButton
+
 from geometry import *
-import statistics as stc
 
 plt.style.use('_mpl-gallery')
 
-def format_contour(x: int, contours: list):# gets the (x,y) coordinates for the desired contour, and plots it
-    
-    formatted_contours = []
-    for i in range(len(contours[x][0])):
+global coors
+coors = []
+
+def on_click(event):
+    if event.button is MouseButton.LEFT:
+        if len(coors) < 2 and len(coors) == 0:
+            
+            coors.append([event.xdata, event.ydata])
+            print(f'You pressed at, X coor: {event.xdata}, Y coor: {event.ydata}')
+            plt.close()
         
+        
+def get_closest(points, targetPoint):
+    distances = []
+
+    for i in range(len(points[0])):
+        dist = get_distance(points[0][i], points[1][i], targetPoint[0][0], targetPoint[0][1], start_frame)
+        distances.append(dist)
+
+    mini = min(distances)
+    index = distances.index(mini)
+
+    return index
+
+def format_contour(x: int, contours: list):# gets the (x,y) coordinates for the desired contour, and plots it
+    formatted_contours = []
+    for i in range(len(contours[x])):
         formatted_contours.append(contours[x][i][0])
     
     xvars, yvars = [], []
@@ -41,14 +66,59 @@ def get_contour_center(y, contours_list, centers = [[],[]]): # gets the center o
 
     return x_ave, y_ave, contour1
 
-def check_contours(x_range, y_range, contours, previous_center): #y_range and x_range are the max distance the points can be from each other on respective axis
+def get_first_contour(frame, contours, another):
+    bad_centers = [[],[]]
+    centers = [[],[]]
+    base_center = [0,0]
+    
+    old_x = 0
+    old_y = 0
+
+    global start_frame
+    start_frame = frame
+
+    counter = 1
+
+    for i in contours:
+        
+        x, y, thing = get_contour_center(0, [i], bad_centers)        
+
+        if abs(old_x - x) < 5:
+            continue
+                    
+        if abs(old_y - y) < 5:
+            continue
+
+        old_x = x
+        old_y = y
+        counter += 1
+
+        if counter == len(contours):
+            another = 1
+            continue
+
+        centers[0].append(x)
+        centers[1].append(y)
+
+    plt.figure(figsize=(7,7))
+    plt.connect('button_press_event', on_click)
+    plt.scatter(centers[0], centers[1])
+    plt.imshow(frame)
+    plt.show()
+
+    print(coors)
+    index = get_closest(centers, coors)
+
+    base_center[0] = centers[0][index]
+    base_center[1] = centers[1][index]
+    return base_center, another
+
+def check_contours(x_range, y_range, contours, previous_center, counter): #y_range and x_range are the max distance the points can be from each other on respective axis
     centers = [[],[]]
     good_centers = [[],[]]
-    contours_f = [[],[]]
+
     for i in range(len(contours)):
         x_cent, y_cent, contour = get_contour_center(i, contours)
-        contours_f[0].append(contour[0])
-        contours_f[1].append(contour[1])
         centers[0].append(x_cent)
         centers[1].append(y_cent)
         
@@ -58,42 +128,37 @@ def check_contours(x_range, y_range, contours, previous_center): #y_range and x_
             good_centers[1].append(centers[1][i])
 
     if len(good_centers[0]) >= 2:
-        plt.plot(good_centers[0], good_centers[1], color="pink", marker="*")
-        plt.scatter(contours_f[0], contours_f[1], color="green", marker=".")
-        plt.imshow(start_frame)
-        plt.show()
-        print(good_centers)
-        raise Exception("two points were found in the constraints for the next point")
+        counter += 1
+        return [good_centers[0][1]], [good_centers[1][1]], counter
+        
     elif len(good_centers[0]) == 0 or len(good_centers[1]) == 0:
-        return 0, 0
+        return 0, 0, counter
     else:
-        return good_centers[0][0], good_centers[1][0]
+        return good_centers[0], good_centers[1], counter
 
 
 def get_video_centers(video: str): #plays the video and returns centers and the capture object
+    global frame_list
+    frame_list = []
     cap_centers = [[],[]]
-    bad_centers = [[],[]]
-
+    counter = 0
     cap = cv2.VideoCapture(video) #sys.argv[1]
     frames = 0
     another = 0
 
     while (cap.isOpened()):
         ret, frame = cap.read()
-        try:
-            if frames%10 == 0:
-                plt.imshow(frame, alpha=.2)
-        except:
-            pass
         
         if ret == True:
-            
-        # Capture frame-by-frame
+            frame2 = frame
+            frame_list.append(frame2)
+
+            # Capture frame-by-frame
 
             blurred_image = cv2.GaussianBlur(frame, (7,7), 0)
             # read and blur the image
             
-            canny = cv2.Canny(blurred_image, 70, 275) #70, 420
+            canny = cv2.Canny(blurred_image, 70, 320) #70, 420
             #                                 ^    ^
             #                 change these    |    |  to change contour finding
             contours, hierarchy = cv2.findContours(canny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -101,56 +166,28 @@ def get_video_centers(video: str): #plays the video and returns centers and the 
             #    continue
             if len(contours) == 0:
                 continue
+
             if frames == 0 or another == 1:
-                old_x = 0
-                old_y = 0
+                cv2.drawContours(frame, contours, -1 ,(0,255,0), 2)
+                base_center, another = get_first_contour(frame, contours, another)
 
-                global start_frame
-                start_frame = frame
-
-                counter = 1
-
-                for i in contours:
-                    x, y, thing = get_contour_center(0, [i], bad_centers)
-                    print(counter, len(contours))
-                    if counter == len(contours):
-                        print("success")
-                        another = 1
-                        continue
-
-                    if abs(old_x - x) < 30:
-                        continue
-                    
-                    if abs(old_y - y) < 30:
-                        continue
-                    cv2.drawContours(blurred_image, contours, -1 ,(0,255,0), 2)
-                    cv2.imshow("objects Found", blurred_image)
-                    plt.imshow(frame)
-                    plt.plot(x, y, color="purple", marker=".")
-                    plt.show()
-                    answr = input("Is that the right center, y or n: ")
-                    
-                    old_x = x
-                    old_y = y
-                    counter += 1
-
-                    if answr == 'y':
-                        base_center = [x,y]
-                        another = 0
-                        break
-                    else:
-                        continue
-                    
             if another == 0:
-                x_c, y_c = check_contours(50, 40, contours, base_center)
-
+                x_c, y_c, counter = check_contours(30, 20, contours, base_center, counter)
+                base_center = [x_c, y_c]
                 if x_c != 0 or y_c != 0: 
                     cap_centers[0].append(x_c)
                     cap_centers[1].append(y_c)
 
             #get_contour_center(0, contours, cap_centers)
+            scale_percent = 40 # percent of original size
+            width = int(frame.shape[1] * scale_percent / 100)
+            height = int(frame.shape[0] * scale_percent / 100)
+            
             cv2.drawContours(frame, contours, -1 ,(0,255,0), 2)
-            cv2.imshow("objects Found", frame)
+            resized = cv2.resize(frame, dsize=(width, height))
+            cv2.imshow("objects Found", resized)
+            cv2.resizeWindow("objects Found", width, height)
+            
 
             frames += 1
 
@@ -163,7 +200,7 @@ def get_video_centers(video: str): #plays the video and returns centers and the 
     return cap_centers, cap
 
 vid_centers, capture = get_video_centers(sys.argv[1])
-print(vid_centers)
+
 def sequence_find(x, points):
     RotationCenters = [[], []]
     
@@ -202,8 +239,8 @@ def sequence_find(x, points):
         RotationCenters[1].append(cor[1])
     return RotationCenters
 
-Cents_Rot = sequence_find(3, vid_centers)
-print(Cents_Rot)
+Cents_Rot = sequence_find(int((len(vid_centers[0])/7)), vid_centers) # first arg is the increment, set here by size of vid_centers / 10 
+#                                                                       so it is relative for diff. sizes of vid_centers
 
 def find_ave_COR(used_cors = [[0,1],[0,1]]):
     for i in range(int(sys.argv[2])):
@@ -243,19 +280,40 @@ def find_ave_COR(used_cors = [[0,1],[0,1]]):
     return used_cors, ave_x, ave_y
 
 Cors_used, ave_cor_x, ave_cor_y = find_ave_COR(Cents_Rot)
-print(ave_cor_x, ', ', ave_cor_y)
-plt.scatter(ave_cor_x, ave_cor_y, color="red", marker='o', zorder=6, label="Average COR")
 
-#plt.scatter(Original_cors[0], Original_cors[1], color="purple", marker='+', zorder=3, label="COR's before outlier removal")
+print(ave_cor_x, ', ', ave_cor_y)
+
+plt.figure(figsize = (8,8))
+
+pic = frame_list[int(len(frame_list)/2)]
+plt.imshow(pic)
+
+plt.scatter(ave_cor_x, ave_cor_y, color="red", marker='o', zorder=6, label="Average COR") # plots average center of rotation
+
 plt.scatter(Cors_used[0], Cors_used[1], color="green", marker='*', zorder=5, label="COR's after outlier removal")
-#plt.scatter(ave_cor_x, ave_cor_y, color="red", marker='o', zorder=6, label="Average COR")
 plt.plot(vid_centers[0], vid_centers[1], color="blue", marker=".", zorder=2, label='Head Movement')
 
 plt.legend(loc="upper right")
 
-# release the video capture object
-
 # Closes all the windows currently opened.
 cv2.destroyAllWindows()
 
+
+
+# first line of text file is the x coordinate of the center of rotation,
+# second line is the y coordinate of the center of rotation
+
+file_name = sys.argv[1]
+file_names = file_name.split("/")
+name = file_names[-1].replace(".mp4","")
+
+plt.savefig(f"Plots/{name}.png")
+
+cv2.imwrite(f"PicOutputs/{name}_image.jpg", pic)
 plt.show()
+file = open(f"TextOutputs/{name}_output.txt", "w")
+
+file.write(f"{str(ave_cor_x)} ")
+file.write(f"{str(ave_cor_y)}")
+
+file.close()

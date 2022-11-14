@@ -1,4 +1,6 @@
 # y = mx + b
+import math
+import matplotlib.pyplot as plt
 class Line():
     def __init__(self, coor1 = [0,0], coor2 = [0,0], m = 0, b = 0):
         self.coor1 = coor1
@@ -48,3 +50,13 @@ def get_intersection(line1, line2):
         return(0,0)
     else: 
         return (x, y_test1)
+
+def get_distance(x1, y1, x2, y2, frame):
+    xDist = x2 - x1
+    yDist = y2 - y1
+    
+    xd2 = xDist ** 2
+    yd2 = yDist ** 2
+    finDist = math.sqrt(xd2 + yd2)
+    return finDist
+    
