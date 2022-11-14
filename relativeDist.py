@@ -9,9 +9,9 @@ coors = []
 
 def on_click(event):
     if event.button is MouseButton.LEFT:
-        if len(coors) < 4:
+        if len(coors) < 3:
             coors.append((event.xdata, event.ydata))
-            print(f'You pressed at, X coor: {event.xdata}, Y coor: {event.ydata}')
+            print(f'You pressed at: ({event.xdata}, {event.ydata})')
 
 with open(f"TextOutputs/{sys.argv[1]}_output.txt", 'r') as file:
     text = file.readline()
@@ -28,4 +28,4 @@ plt.plot(x_center, y_center, color="red", marker='o')
 plt.imshow(image)
 
 plt.show()
-print(coors)
+print("\n", coors)

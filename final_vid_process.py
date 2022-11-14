@@ -1,5 +1,4 @@
 # final_vid_process.py VID_EDITED/side_head1.mp4 3
-
 import statistics as stc
 import sys
 
@@ -17,18 +16,15 @@ coors = []
 
 def on_click(event):
     if event.button is MouseButton.LEFT:
-        if len(coors) < 2 and len(coors) == 0:
-            
+        if len(coors) < 2 and len(coors) == 0:       
             coors.append([event.xdata, event.ydata])
-            print(f'You pressed at, X coor: {event.xdata}, Y coor: {event.ydata}')
             plt.close()
-        
         
 def get_closest(points, targetPoint):
     distances = []
 
     for i in range(len(points[0])):
-        dist = get_distance(points[0][i], points[1][i], targetPoint[0][0], targetPoint[0][1], start_frame)
+        dist = get_distance(points[0][i], points[1][i], targetPoint[0][0], targetPoint[0][1])
         distances.append(dist)
 
     mini = min(distances)
@@ -80,7 +76,6 @@ def get_first_contour(frame, contours, another):
     counter = 1
 
     for i in contours:
-        
         x, y, thing = get_contour_center(0, [i], bad_centers)        
 
         if abs(old_x - x) < 5:
@@ -106,7 +101,6 @@ def get_first_contour(frame, contours, another):
     plt.imshow(frame)
     plt.show()
 
-    print(coors)
     index = get_closest(centers, coors)
 
     base_center[0] = centers[0][index]
@@ -141,8 +135,10 @@ def get_video_centers(video: str): #plays the video and returns centers and the 
     global frame_list
     frame_list = []
     cap_centers = [[],[]]
-    counter = 0
+    
     cap = cv2.VideoCapture(video) #sys.argv[1]
+
+    counter = 0
     frames = 0
     another = 0
 
@@ -153,8 +149,6 @@ def get_video_centers(video: str): #plays the video and returns centers and the 
             frame2 = frame
             frame_list.append(frame2)
 
-            # Capture frame-by-frame
-
             blurred_image = cv2.GaussianBlur(frame, (7,7), 0)
             # read and blur the image
             
@@ -162,8 +156,7 @@ def get_video_centers(video: str): #plays the video and returns centers and the 
             #                                 ^    ^
             #                 change these    |    |  to change contour finding
             contours, hierarchy = cv2.findContours(canny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            #if len(contours) == 0 or len(contours) > 1:
-            #    continue
+
             if len(contours) == 0:
                 continue
 
@@ -174,11 +167,11 @@ def get_video_centers(video: str): #plays the video and returns centers and the 
             if another == 0:
                 x_c, y_c, counter = check_contours(30, 20, contours, base_center, counter)
                 base_center = [x_c, y_c]
+
                 if x_c != 0 or y_c != 0: 
                     cap_centers[0].append(x_c)
                     cap_centers[1].append(y_c)
 
-            #get_contour_center(0, contours, cap_centers)
             scale_percent = 40 # percent of original size
             width = int(frame.shape[1] * scale_percent / 100)
             height = int(frame.shape[0] * scale_percent / 100)
@@ -188,7 +181,6 @@ def get_video_centers(video: str): #plays the video and returns centers and the 
             cv2.imshow("objects Found", resized)
             cv2.resizeWindow("objects Found", width, height)
             
-
             frames += 1
 
         else:
@@ -197,16 +189,15 @@ def get_video_centers(video: str): #plays the video and returns centers and the 
         if cv2.waitKey(25) == ord('q'): #not sure what this does, but you need it.
             break
     cap.release()
-    return cap_centers, cap
+    return cap_centers, cap, counter
 
-vid_centers, capture = get_video_centers(sys.argv[1])
+vid_centers, capture, num_exc = get_video_centers(sys.argv[1])
+print(f"There were {num_exc} times when two points were found in the constraints for the next point")
 
 def sequence_find(x, points):
     RotationCenters = [[], []]
     
     for i in range(0, len(points[0]) - (2 * x), x):
-        
-
         x1_1 = points[0][i][0]
         y1_1 = points[1][i][0]
         x1_2 = points[0][i+x][0]
@@ -219,8 +210,6 @@ def sequence_find(x, points):
 
         line_1 = Line(coor1 = [x1_1, y1_1], coor2 = [x1_2, y1_2])
         line_2 = Line(coor1 = [x2_1, y2_1], coor2 = [x2_2, y2_2])
-
-        #print(line_1.y1, line_1.m, line_1.x1)
 
         line_1.get_m_b()
         line_2.get_m_b()
@@ -239,9 +228,8 @@ def sequence_find(x, points):
         RotationCenters[1].append(cor[1])
     return RotationCenters
 
-Cents_Rot = sequence_find(int((len(vid_centers[0])/7)), vid_centers) # first arg is the increment, set here by size of vid_centers / 10 
-#                                                                       so it is relative for diff. sizes of vid_centers
-
+Cents_Rot = sequence_find(int((len(vid_centers[0])/7)), vid_centers) # first arg is the increment, set here by size of vid_centers / 7 
+#                                                                       so it is relative for different sizes of vid_centers
 def find_ave_COR(used_cors = [[0,1],[0,1]]):
     for i in range(int(sys.argv[2])):
         x_ave_cor = np.mean(used_cors[0])
@@ -274,14 +262,13 @@ def find_ave_COR(used_cors = [[0,1],[0,1]]):
                 used_cors[0].pop(index2)
                 #del used_cors[0][index2]
 
-
     ave_x = np.mean(used_cors[0])
     ave_y = np.mean(used_cors[1])
     return used_cors, ave_x, ave_y
 
 Cors_used, ave_cor_x, ave_cor_y = find_ave_COR(Cents_Rot)
 
-print(ave_cor_x, ', ', ave_cor_y)
+print(f"Center of rotation: ({ave_cor_x}, {ave_cor_y}")
 
 plt.figure(figsize = (8,8))
 
@@ -289,19 +276,12 @@ pic = frame_list[int(len(frame_list)/2)]
 plt.imshow(pic)
 
 plt.scatter(ave_cor_x, ave_cor_y, color="red", marker='o', zorder=6, label="Average COR") # plots average center of rotation
-
 plt.scatter(Cors_used[0], Cors_used[1], color="green", marker='*', zorder=5, label="COR's after outlier removal")
 plt.plot(vid_centers[0], vid_centers[1], color="blue", marker=".", zorder=2, label='Head Movement')
 
 plt.legend(loc="upper right")
 
-# Closes all the windows currently opened.
 cv2.destroyAllWindows()
-
-
-
-# first line of text file is the x coordinate of the center of rotation,
-# second line is the y coordinate of the center of rotation
 
 file_name = sys.argv[1]
 file_names = file_name.split("/")
@@ -313,7 +293,6 @@ cv2.imwrite(f"PicOutputs/{name}_image.jpg", pic)
 plt.show()
 file = open(f"TextOutputs/{name}_output.txt", "w")
 
-file.write(f"{str(ave_cor_x)} ")
-file.write(f"{str(ave_cor_y)}")
+file.write(f"{str(ave_cor_x)} {str(ave_cor_y)}")
 
 file.close()

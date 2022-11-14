@@ -51,7 +51,7 @@ def get_intersection(line1, line2):
     else: 
         return (x, y_test1)
 
-def get_distance(x1, y1, x2, y2, frame):
+def get_distance(x1, y1, x2, y2):
     xDist = x2 - x1
     yDist = y2 - y1
     
