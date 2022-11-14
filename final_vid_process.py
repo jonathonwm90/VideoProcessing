@@ -208,8 +208,8 @@ def sequence_find(x, points):
         x2_2 = points[0][i+(2*x)][0]
         y2_2 = points[1][i+(2*x)][0]
 
-        line_1 = Line(coor1 = [x1_1, y1_1], coor2 = [x1_2, y1_2])
-        line_2 = Line(coor1 = [x2_1, y2_1], coor2 = [x2_2, y2_2])
+        line_1 = Line(coor1 = (x1_1, y1_1), coor2 = (x1_2, y1_2))
+        line_2 = Line(coor1 = (x2_1, y2_1), coor2 = (x2_2, y2_2))
 
         line_1.get_m_b()
         line_2.get_m_b()

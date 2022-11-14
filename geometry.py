@@ -2,7 +2,7 @@
 import math
 import matplotlib.pyplot as plt
 class Line():
-    def __init__(self, coor1 = [0,0], coor2 = [0,0], m = 0, b = 0):
+    def __init__(self, coor1 = (0,0), coor2 = (0,0), m = 0, b = 0):
         self.coor1 = coor1
         self.coor2 = coor2
 
