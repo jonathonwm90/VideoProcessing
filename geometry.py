@@ -51,12 +51,31 @@ def get_intersection(line1, line2):
     else: 
         return (x, y_test1)
 
-def get_distance(x1, y1, x2, y2):
+def get_distance(coor1, coor2):
+    x1, y1 = coor1[0], coor1[1]
+    x2, y2 = coor2[0], coor2[1]
+
     xDist = x2 - x1
     yDist = y2 - y1
     
     xd2 = xDist ** 2
     yd2 = yDist ** 2
     finDist = math.sqrt(xd2 + yd2)
-    return finDist
-    
+    return finDist  
+
+def get_circle(coor1, coor2, coor3):
+    line1 = Line(coor1, coor2)
+    line2 = Line(coor1, coor3)
+
+    line1.get_m_b()
+    line2.get_m_b()
+
+    line3 = get_perpendicular_bisector(line1)
+    line4 = get_perpendicular_bisector(line2)
+
+    inter = get_intersection(line3, line4)
+
+    cx, cy = inter[0], inter[1]
+    r = get_distance(inter, coor3)
+
+    return cx, cy, r
