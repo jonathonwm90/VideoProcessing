@@ -15,6 +15,12 @@ coors = []
 global coors2
 coors2 = []
 
+global name
+
+in_file_name = sys.argv[1]
+file_names = in_file_name.split("/")
+name = file_names[-1].replace(".avi","")
+
 def on_click(event):
     if event.button is MouseButton.LEFT:
         if len(coors) == 0:       
@@ -30,10 +36,8 @@ def on_click3(event):
             plt.close()
 
         if len(coors2) == 4:
-            print(len(coors2))
             coors2 = [[event.xdata, event.ydata]]
-       
-
+    
 def get_closest(points, targetPoint):
     distances = []
 
@@ -80,7 +84,7 @@ def get_first_contour(frame, contours):
     bad_centers = [[],[]]
     centers = [[],[]]
     base_center = [0,0]
-    
+
     old_x = 0
     old_y = 0
 
@@ -114,7 +118,8 @@ def get_first_contour(frame, contours):
     base_center[1] = centers[1][index]
     return base_center
 
-def check_contours(x_range, y_range, contours, previous_center, counter): #y_range and x_range are the max distance the points can be from each other on respective axis
+def check_contours(x_range, y_range, contours, previous_center, counter):
+    #global last_good_center #y_range and x_range are the max distance the points can be from each other on respective axis
     centers = [[],[]]
     good_centers = [[],[]]
 
@@ -127,13 +132,19 @@ def check_contours(x_range, y_range, contours, previous_center, counter): #y_ran
         if (abs(centers[0][i] - previous_center[0])) < (x_range) and (abs(centers[1][i] - previous_center[1])) < (y_range):
             good_centers[0].append(centers[0][i])
             good_centers[1].append(centers[1][i])
+        #elif (abs(centers[0][i] - last_good_center[0])) < (x_range) and (abs(centers[1][i] - last_good_center[1])) < (y_range):
+        #    good_centers[0].append(centers[0][i])
+        #    good_centers[1].append(centers[1][i])
+        
 
     if len(good_centers[0]) >= 2:
         counter += 1
         return [good_centers[0][1]], [good_centers[1][1]], counter
         
     elif len(good_centers[0]) == 0 or len(good_centers[1]) == 0:
-        return 0, 0, counter
+        #last_good_center = previous_center
+        #print("previous_center used")
+        return previous_center[0], previous_center[1], counter
     else:
         return good_centers[0], good_centers[1], counter
 
@@ -145,20 +156,11 @@ def get_video_centers(video: str): #plays the video and returns centers and the 
     counter = 0
     frames = 0
 
-
     while (cap.isOpened()):
         ret, frame = cap.read()
         
-        if ret == True:
-            scale_percent2 = 80 # percent of original size
-            width2 = int(frame.shape[1] * scale_percent2 / 100)
-            height2 = int(frame.shape[0] * scale_percent2 / 100)
-            frame = cv2.resize(frame, dsize=(width2, height2))
-
-            blurred_image = cv2.GaussianBlur(frame, (7,7), 0)
-            # read and blur the image
-            
-            canny = cv2.Canny(blurred_image, 70, 320) #70, 420
+        if ret == True:            
+            canny = cv2.Canny(frame, 50, 265) #70, 420
             #                                 ^    ^
             #                 change these    |    |  to change contour finding
             contours, hierarchy = cv2.findContours(canny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -169,16 +171,19 @@ def get_video_centers(video: str): #plays the video and returns centers and the 
             if frames == 0:
                 global start_frame
                 start_frame = frame
+                cv2.imwrite(f"PicOutputs/{name}_image.jpg", start_frame)
                 base_center = get_first_contour(frame, contours)
+                #global last_good_center
+                #last_good_center = base_center
 
-            x_c, y_c, counter = check_contours(30, 20, contours, base_center, counter)
-            base_center = [x_c, y_c]
+            x_c, y_c, counter = check_contours(20, 10, contours, base_center, counter)
 
             if x_c != 0 or y_c != 0: 
+                base_center = [x_c, y_c]
                 cap_centers[0].append(x_c)
                 cap_centers[1].append(y_c)
 
-            scale_percent = 40 # percent of original size
+            scale_percent = 90 # percent of original size
             width = int(frame.shape[1] * scale_percent / 100)
             height = int(frame.shape[0] * scale_percent / 100)
             
@@ -197,7 +202,13 @@ def get_video_centers(video: str): #plays the video and returns centers and the 
     cap.release()
     return cap_centers, cap, counter
 
-vid_centers, capture, num_exc = get_video_centers(sys.argv[1])
+vid_centers1, capture, num_exc = get_video_centers(sys.argv[1])
+vid_centers = []
+
+for i in vid_centers1:
+    if i not in vid_centers:
+        vid_centers.append(i)
+
 print(f"There were {num_exc} times when two points were found in the constraints for the next point\a")
 cv2.destroyAllWindows()
 
@@ -208,10 +219,6 @@ minp = (vid_centers[0][indxm], vid_centers[1][indxm])
 maxx = max(vid_centers[0])
 indxmax = vid_centers[0].index(maxx)
 maxp = (vid_centers[0][indxmax], vid_centers[1][indxmax])
-
-in_file_name = sys.argv[1]
-file_names = in_file_name.split("/")
-name = file_names[-1].replace(".mp4","")
 
 def try_circle(start_frame, vid_centers, name):
     plt.figure(figsize = (8,8))
@@ -229,9 +236,9 @@ def try_circle(start_frame, vid_centers, name):
     plt.plot(vid_centers[0], vid_centers[1], color="blue", marker=".", zorder=2, label='Head Movement')
     plt.scatter(cx, cy, color='red', zorder=1, label="center of rotation")
     plt.legend(loc="upper right")
-    plt.savefig(f"Plots/{name}.png")
     circle = plt.Circle((cx, cy), radius, fill = False, zorder=3, color="red")
     plt.gca().add_patch(circle)
+    plt.savefig(f"Plots/{name}.png")
     plt.show()
     return cx, cy
 
@@ -240,9 +247,6 @@ is_good = input("was that good, y or n: ")
 while is_good == 'n':
     cx, cy = try_circle(start_frame, vid_centers, name)
     is_good = input("was that good, y or n: ")
-
-cv2.imwrite(f"PicOutputs/{name}_image.jpg", start_frame)
-
 
 with open(f"TextOutputs/{name}_output.txt", "w") as file:
     file.write(f"{str(cx)} {str(cy)}\n{str(minp[0][0])} {str(minp[1][0])}\n{str(maxp[0][0])} {str(maxp[1][0])}\n")

@@ -1,8 +1,8 @@
 # y = mx + b
 import math
-import matplotlib.pyplot as plt
 class Line():
-    def __init__(self, coor1 = (0,0), coor2 = (0,0), m = 0, b = 0):
+    perp_slope: float
+    def __init__(self, coor1 = (0,0), coor2 = (0,0), m = 0.0, b = 0.0):
         self.coor1 = coor1
         self.coor2 = coor2
 
@@ -28,6 +28,11 @@ class Line():
         y = ((self.y1 + self.y2) / 2)
         self.midpoint = (x, y)
         return self.midpoint
+
+def get_perp_slope(line):
+    perp_slope = (-1) * (1 / line.m)
+    line.perp_slope = perp_slope
+    return perp_slope
 
 def get_perpendicular_bisector(line):
     perp_slope = (-1) * (1 / line.m)
@@ -79,3 +84,17 @@ def get_circle(coor1, coor2, coor3):
     r = get_distance(inter, coor3)
 
     return cx, cy, r
+
+def get_angle(line1: Line, line2: Line):
+    num = (line2.m - line1.m) / (1 + (line1.m * line2.m))
+    deg = math.degrees(math.atan(num))
+    return abs(deg)
+
+def get_angle_to_vertical(line1: Line):
+    num = -line1.m
+    deg = math.degrees(math.atan(num))
+    oppDeg = 90 - deg
+
+    if (oppDeg > 90):
+        return 180 - abs(oppDeg)
+    return abs(oppDeg)

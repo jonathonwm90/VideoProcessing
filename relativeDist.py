@@ -5,13 +5,15 @@ from matplotlib.backend_bases import MouseButton
 import cv2
 
 global coors
-coors = []
+coors2 = []
+global coors3
+coors3 = []
 
-def on_click(event):
+def on_click2(event):
     if event.button is MouseButton.LEFT:
-        if len(coors) < 2:
-            coors.append((event.xdata, event.ydata))
-        if len(coors) == 2:
+        if len(coors2) < 2:
+            coors2.append((event.xdata, event.ydata))
+        if len(coors2) == 2:
             plt.close()
 
 def convert(num, ratio):
@@ -32,21 +34,24 @@ min_text = text[1].split(" ")
 max_text = text[2].split(" ")
 
 x_center, y_center = float(L1_text_split[0]), float(L1_text_split[1])
+COR = [x_center, y_center]
 minpt = (float(min_text[0]), float(min_text[1]))
 maxpt = (float(max_text[0]), float(max_text[1]))
 
 image = cv2.imread(f"PicOutputs/{sys.argv[1]}_image.jpg")
 
-print("first two clicks are for the known distance")
+mode = int(sys.argv[2])
+print(mode)
 
+print("first two clicks are for the known distance")
 plt.figure(figsize=(7,7))
-plt.connect("button_press_event", on_click)
+plt.connect("button_press_event", on_click2)
 plt.plot(x_center, y_center, color="red", marker='o')
 plt.imshow(image)
 plt.show()
 
-point1 = coors[0]
-point2 = coors[1]
+point1 = coors2[0]
+point2 = coors2[1]
   
 distance_inpt = gy.get_distance(point1, point2)
 
@@ -54,6 +59,12 @@ given_dist = float(input("Input the known distance:\n"))
 
 ratio = given_dist/distance_inpt
 
-plot_line_dist(image, point1, [x_center, y_center], ratio, color='b')
-plot_line_dist(image, point2, [x_center, y_center], ratio, color='r')
+
+plot_line_dist(image, point1, COR, ratio, color='b')
+plot_line_dist(image, point2, COR, ratio, color='r')
 plt.show()
+P1_COR_ln = gy.Line(point1, COR)
+P2_COR_ln = gy.Line(point2, COR)
+
+
+    
